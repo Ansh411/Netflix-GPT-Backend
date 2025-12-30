@@ -51,6 +51,25 @@ app.get("/api/movies/search", async (req, res) => {
   }
 });
 
+app.get("/api/movies/:id/details", async (req, res) => {
+  try {
+    const data = await tmdbFetch(`/movie/${req.params.id}?language=en-US`);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/movies/:id/similar", async (req, res) => {
+  try {
+    const data = await tmdbFetch(`/movie/${req.params.id}/similar?page=1`);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 /* POPULAR */
 app.get("/api/movies/popular", async (_, res) => {
   try {
