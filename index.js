@@ -51,6 +51,47 @@ app.get("/api/movies/search", async (req, res) => {
   }
 });
 
+/* POPULAR */
+app.get("/api/movies/popular", async (_, res) => {
+  try {
+    const data = await tmdbFetch("/movie/popular?page=1");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* NOW PLAYING */
+app.get("/api/movies/now-playing", async (_, res) => {
+  try {
+    const data = await tmdbFetch("/movie/now_playing?page=1");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* TOP RATED */
+app.get("/api/movies/top-rated", async (_, res) => {
+  try {
+    const data = await tmdbFetch("/movie/top_rated?page=1");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* UPCOMING */
+app.get("/api/movies/upcoming", async (_, res) => {
+  try {
+    const data = await tmdbFetch("/movie/upcoming?page=1");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 /* GENRE ROUTES */
 const GENRES = {
   crime: 80,
