@@ -91,12 +91,26 @@ app.get("/api/movies/upcoming", async (_, res) => {
   }
 });
 
+app.get("/api/movies/classic", async (_, res) => {
+  try {
+    const data = await tmdbFetch(
+      `/discover/movie?language=en-US&page=1&vote_count.gte=1000&vote_average.gte=7.5&sort_by=vote_count.desc`
+    );
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 /* GENRE ROUTES */
 const GENRES = {
-  crime: 80,
-  romance: 10749,
-  documentary: 99
+  crime: "80",
+  romance: "10749",
+  documentary: "99",
+  comedy: "35",
+  fantasy: "14,16",
+  horror: "27,9648",
 };
 
 Object.entries(GENRES).forEach(([name, id]) => {
