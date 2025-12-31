@@ -211,17 +211,31 @@ app.get("/api/fanart/movie/:tmdbId", async (req, res) => {
       `https://webservice.fanart.tv/v3/movies/${req.params.tmdbId}?api_key=${process.env.FANART_API_KEY}`
     );
 
-    if (!response.ok) return res.json({ logos: [] });
+    if (!response.ok) {
+      return res.json({ logos: [] });
+    }
 
     const data = await response.json();
 
+    // 🔹 Collect all possible logo arrays
+    const allLogos = [
+      ...(data?.hdmovielogo || []),
+      ...(data?.movielogo || []),
+    ];
+
+    // 🔹 Filter ONLY English logos
+    const englishLogos = allLogos.filter(
+      (logo) => logo.lang === "en"
+    );
+
     res.json({
-      logos: data?.hdmovielogo || data?.movielogo || []
+      logos: englishLogos,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 /* --------------------------------------------------
    HEALTH CHECK
