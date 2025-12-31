@@ -121,6 +121,46 @@ app.get("/api/movies/classic", async (_, res) => {
   }
 });
 
+/* CAST & CREW */
+app.get("/api/movies/:id/credits", async (req, res) => {
+  try {
+    const data = await tmdbFetch(
+      `/movie/${req.params.id}/credits?language=en-US`
+    );
+
+    const cast = (data.cast || []).map((person) => ({
+      id: person.id,
+      name: person.name,
+      character: person.character,
+      profile_path: person.profile_path,
+    }));
+
+    res.json({ cast });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* META INFO ROW */
+app.get("/api/movies/:id/meta", async (req, res) => {
+  try {
+    const data = await tmdbFetch(
+      `/movie/${req.params.id}?language=en-US`
+    );
+
+    res.json({
+      runtime: data.runtime,
+      release_date: data.release_date,
+      vote_average: data.vote_average,
+      adult: data.adult,
+      genres: data.genres?.map((g) => g.name) || [],
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
 /* GENRE ROUTES */
 const GENRES = {
