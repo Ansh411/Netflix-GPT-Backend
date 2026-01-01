@@ -428,6 +428,28 @@ app.get("/api/tv/search", async (req, res) => {
   }
 });
 
+/* TV META INFO */
+app.get("/api/tv/:id/meta", async (req, res) => {
+  try {
+    const data = await tmdbFetch(
+      `/tv/${req.params.id}?language=en-US`
+    );
+
+    res.json({
+      episode_runtime: data.episode_run_time?.[0] || null,
+      first_air_date: data.first_air_date,
+      last_air_date: data.last_air_date,
+      seasons: data.number_of_seasons,
+      episodes: data.number_of_episodes,
+      vote_average: data.vote_average,
+      adult: data.adult,
+      genres: data.genres?.map((g) => g.name) || [],
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 /* --------------------------------------------------
