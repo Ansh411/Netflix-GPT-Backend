@@ -162,6 +162,7 @@ app.get("/api/movies/:id/meta", async (req, res) => {
 
 
 
+
 /* GENRE ROUTES */
 const GENRES = {
   crime: "80",
@@ -207,11 +208,11 @@ app.post("/api/gpt/movies", async (req, res) => {
     const { query } = req.body;
     if (!query) return res.json([]);
 
-    const prompt = `Return ONLY a comma-separated list of valid movie titles.
+    const prompt = `Return ONLY a comma-separated list of valid movie or TV Shows English titles.
 No numbering.
 No explanations.
 No extra text.
-Give atleast 25 Movies.
+Give atleast 25 Movies or TV Shows Combined.
 User query: "${query}"`;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -275,6 +276,85 @@ app.get("/api/fanart/movie/:tmdbId", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/* --------------------------------------------------
+   TV SHOW ROUTES
+-------------------------------------------------- */
+
+/* POPULAR TV */
+app.get("/api/tv/popular", async (_, res) => {
+  try {
+    const data = await tmdbFetch("/tv/popular?page=1");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* TOP RATED TV */
+app.get("/api/tv/top-rated", async (_, res) => {
+  try {
+    const data = await tmdbFetch("/tv/top_rated?page=1");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ON THE AIR */
+app.get("/api/tv/on-the-air", async (_, res) => {
+  try {
+    const data = await tmdbFetch("/tv/on_the_air?page=1");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* TV DETAILS */
+app.get("/api/tv/:id/details", async (req, res) => {
+  try {
+    const data = await tmdbFetch(`/tv/${req.params.id}?language=en-US`);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* TV SEASON EPISODES */
+app.get("/api/tv/:id/season/:season", async (req, res) => {
+  try {
+    const { id, season } = req.params;
+    const data = await tmdbFetch(`/tv/${id}/season/${season}`);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* TV TRAILER */
+app.get("/api/tv/:id/trailer", async (req, res) => {
+  try {
+    const data = await tmdbFetch(`/tv/${req.params.id}/videos`);
+    const trailer = data.results.find(
+      (v) => v.type === "Trailer" && v.site === "YouTube"
+    );
+    res.json(trailer || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* TV CREDITS */
+app.get("/api/tv/:id/credits", async (req, res) => {
+  try {
+    const data = await tmdbFetch(`/tv/${req.params.id}/credits`);
+    res.json({ cast: data.cast || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 /* --------------------------------------------------
