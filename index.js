@@ -200,56 +200,89 @@ app.get("/api/movies/:id/trailer", async (req, res) => {
 });
 
 /* --------------------------------------------------
-   OPENROUTER (GPT) ROUTE
+   OPENROUTER (GPT) ROUTE – MOVIES + TV
 -------------------------------------------------- */
 
-app.post("/api/gpt/movies", async (req, res) => {
+app.post("/api/gpt/search", async (req, res) => {
   try {
-    const { query } = req.body;
+    const { query, type = "both" } = req.body;
+
     if (!query) return res.json([]);
 
-    const prompt = `Return ONLY a comma-separated list of valid movie or TV Shows English titles.
-No numbering.
-No explanations.
-No extra text.
-Give atleast 25 Movies or TV Shows Combined.
-User query: "${query}"`;
+    // 🔒 Safety
+    if (!["movie", "tv", "both"].includes(type)) {
+      return res.json([]);
+    }
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "nex-agi/deepseek-v3.1-nex-n1:free",
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
+    const typeText =
+      type === "movie"
+        ? "movies"
+        : type === "tv"
+        ? "TV shows"
+        : "movies and TV shows";
+
+    const prompt = `
+Return ONLY a comma-separated list of valid English ${typeText} titles.
+Rules:
+- No numbering
+- No explanations
+- No extra text
+- Minimum 25 titles
+User query: "${query}"
+`;
+
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "nex-agi/deepseek-v3.1-nex-n1:free",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.4
+        })
+      }
+    );
 
     const json = await response.json();
 
     const text = json?.choices?.[0]?.message?.content || "";
 
-    const movies = text
+    const results = text
       .split(",")
-      .map((m) => m.trim())
+      .map((item) => item.trim())
       .filter(Boolean);
 
-    res.json(movies);
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+
 /* --------------------------------------------------
-   FANART ROUTE (TMDB ID)
+   FANART ROUTE (MOVIE + TV)
 -------------------------------------------------- */
 
-app.get("/api/fanart/movie/:tmdbId", async (req, res) => {
+app.get("/api/fanart/:type/:tmdbId", async (req, res) => {
   try {
+    const { type, tmdbId } = req.params;
+
+    // 🔒 Validate type
+    if (!["movie", "tv"].includes(type)) {
+      return res.status(400).json({ logos: [] });
+    }
+
+    const endpoint =
+      type === "movie"
+        ? `https://webservice.fanart.tv/v3/movies/${tmdbId}`
+        : `https://webservice.fanart.tv/v3/tv/${tmdbId}`;
+
     const response = await fetch(
-      `https://webservice.fanart.tv/v3/movies/${req.params.tmdbId}?api_key=${process.env.FANART_API_KEY}`
+      `${endpoint}?api_key=${process.env.FANART_API_KEY}`
     );
 
     if (!response.ok) {
@@ -258,11 +291,22 @@ app.get("/api/fanart/movie/:tmdbId", async (req, res) => {
 
     const data = await response.json();
 
-    // 🔹 Collect all possible logo arrays
-    const allLogos = [
-      ...(data?.hdmovielogo || []),
-      ...(data?.movielogo || []),
-    ];
+    // 🔹 Collect logos based on type
+    let allLogos = [];
+
+    if (type === "movie") {
+      allLogos = [
+        ...(data?.hdmovielogo || []),
+        ...(data?.movielogo || []),
+      ];
+    }
+
+    if (type === "tv") {
+      allLogos = [
+        ...(data?.hdtvlogo || []),
+        ...(data?.tvlogo || []),
+      ];
+    }
 
     // 🔹 Filter ONLY English logos
     const englishLogos = allLogos.filter(
@@ -276,6 +320,7 @@ app.get("/api/fanart/movie/:tmdbId", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 /* --------------------------------------------------
    TV SHOW ROUTES
