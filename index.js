@@ -400,6 +400,15 @@ app.get("/api/tv/:id/credits", async (req, res) => {
   }
 });
 
+app.get("/api/tv/:id/similar", async (req, res) => {
+  try {
+    const data = await tmdbFetch(`/tv/${req.params.id}/similar?page=1`);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* --------------------------------------------------
    TV SEARCH
 -------------------------------------------------- */
