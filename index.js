@@ -263,63 +263,120 @@ User query: "${query}"
 });
 
 
-/* --------------------------------------------------
-   FANART ROUTE (MOVIE + TV)
--------------------------------------------------- */
+/* MOVIE LOGO (TMDB → FanArt fallback) */
+app.get("/api/movie/:id/logo", async (req, res) => {
+  const { id } = req.params;
 
-app.get("/api/fanart/:type/:tmdbId", async (req, res) => {
   try {
-    const { type, tmdbId } = req.params;
+    /* ---------------- TMDB FIRST ---------------- */
+    const tmdbData = await tmdbFetch(`/movie/${id}/images`);
 
-    // 🔒 Validate type
-    if (!["movie", "tv"].includes(type)) {
-      return res.status(400).json({ logos: [] });
+    if (tmdbData?.logos?.length) {
+      const englishLogos = tmdbData.logos.filter(
+        (logo) => logo.iso_639_1 === "en"
+      );
+
+      const logosToUse = englishLogos.length
+        ? englishLogos
+        : tmdbData.logos;
+
+      const pngLogos = logosToUse.filter((l) =>
+        l.file_path.endsWith(".png")
+      );
+
+      const finalLogos = pngLogos.length ? pngLogos : logosToUse;
+
+      finalLogos.sort(
+        (a, b) => (b.vote_average || 0) - (a.vote_average || 0)
+      );
+
+      return res.json({
+        source: "tmdb",
+        logo: finalLogos[0]?.file_path || null
+      });
     }
 
-    const endpoint =
-      type === "movie"
-        ? `https://webservice.fanart.tv/v3/movies/${tmdbId}`
-        : `https://webservice.fanart.tv/v3/tv/${tmdbId}`;
-
-    const response = await fetch(
-      `${endpoint}?api_key=${process.env.FANART_API_KEY}`
+    /* ---------------- FANART FALLBACK ---------------- */
+    const fanartRes = await fetch(
+      `https://webservice.fanart.tv/v3/movies/${id}?api_key=${process.env.FANART_API_KEY}`
     );
 
-    if (!response.ok) {
-      return res.json({ logos: [] });
-    }
+    if (fanartRes.ok) {
+      const fanartData = await fanartRes.json();
 
-    const data = await response.json();
-
-    // 🔹 Collect logos based on type
-    let allLogos = [];
-
-    if (type === "movie") {
-      allLogos = [
-        ...(data?.hdmovielogo || []),
-        ...(data?.movielogo || []),
+      const allLogos = [
+        ...(fanartData?.hdmovielogo || []),
+        ...(fanartData?.movielogo || [])
       ];
+
+      if (allLogos.length) {
+        const englishFanart = allLogos.filter(
+          (logo) => logo.lang === "en"
+        );
+
+        const fanartToUse = englishFanart.length
+          ? englishFanart
+          : allLogos;
+
+        return res.json({
+          source: "fanart",
+          logo: fanartToUse[0]?.url || null
+        });
+      }
     }
 
-    if (type === "tv") {
-      allLogos = [
-        ...(data?.hdtvlogo || []),
-        ...(data?.tvlogo || []),
-      ];
+    res.json({ source: "none", logo: null });
+
+  } catch (err) {
+    console.error("Movie Logo API Error:", err.message);
+    res.status(500).json({ source: "none", logo: null });
+  }
+});
+
+
+
+/* TV SHOW LOGO (TMDB) */
+app.get("/api/tv/:id/logo", async (req, res) => {
+  try {
+    const data = await tmdbFetch(`/tv/${req.params.id}/images`);
+
+    if (!data.logos || !data.logos.length) {
+      return res.json({ source: "none", logo: null });
     }
 
-    // 🔹 Filter ONLY English logos
-    const englishLogos = allLogos.filter(
-      (logo) => logo.lang === "en"
+    // English first, else any
+    const englishLogos = data.logos.filter(
+      (logo) => logo.iso_639_1 === "en"
+    );
+
+    const logosToUse = englishLogos.length
+      ? englishLogos
+      : data.logos;
+
+    // Prefer PNG
+    const pngLogos = logosToUse.filter((logo) =>
+      logo.file_path.endsWith(".png")
+    );
+
+    const preferredLogos = pngLogos.length ? pngLogos : logosToUse;
+
+    // Highest rated
+    preferredLogos.sort(
+      (a, b) => (b.vote_average || 0) - (a.vote_average || 0)
     );
 
     res.json({
-      logos: englishLogos,
+      source: "tmdb",
+      logo: preferredLogos[0]?.file_path || null
     });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("TV Logo API Error:", err.message);
+    res.status(500).json({ source: "none", logo: null });
   }
 });
+
+
 
 
 /* --------------------------------------------------
