@@ -400,6 +400,25 @@ app.get("/api/tv/:id/credits", async (req, res) => {
   }
 });
 
+/* --------------------------------------------------
+   TV SEARCH
+-------------------------------------------------- */
+
+app.get("/api/tv/search", async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query) return res.json({ results: [] });
+
+    const data = await tmdbFetch(
+      `/search/tv?query=${encodeURIComponent(query)}&language=en-US&page=1`
+    );
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 /* --------------------------------------------------
