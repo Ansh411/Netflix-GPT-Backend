@@ -376,9 +376,6 @@ app.get("/api/tv/:id/logo", async (req, res) => {
   }
 });
 
-
-
-
 /* --------------------------------------------------
    TV SHOW ROUTES
 -------------------------------------------------- */
@@ -502,6 +499,27 @@ app.get("/api/tv/:id/meta", async (req, res) => {
       adult: data.adult,
       genres: data.genres?.map((g) => g.name) || [],
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* SEARCH MOVIES + TV */
+app.get("/api/search", async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) return res.json({ results: [] });
+
+    const data = await tmdbFetch(
+      `/search/multi?query=${encodeURIComponent(query)}`
+    );
+
+    // ❌ remove people results
+    const filtered = data.results.filter(
+      (item) => item.media_type === "movie" || item.media_type === "tv"
+    );
+
+    res.json(filtered);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
