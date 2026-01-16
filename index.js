@@ -209,6 +209,7 @@ app.post("/api/gpt/search", async (req, res) => {
 
     if (!query) return res.json([]);
 
+    // 🔒 Safety
     if (!["movie", "tv", "both"].includes(type)) {
       return res.json([]);
     }
@@ -221,12 +222,13 @@ app.post("/api/gpt/search", async (req, res) => {
         : "movies and TV shows";
 
     const prompt = `
-Return ONLY a comma-separated list of 20-25 valid English ${typeText} titles based on the query: "${query}".
+Return ONLY a comma-separated list of valid English ${typeText} titles.
 Rules:
-- Strictly NO numbering.
-- Strictly NO explanations or intro text.
-- Strictly NO markdown formatting or backticks.
-- Just titles separated by commas.
+- No numbering
+- No explanations
+- No extra text
+- Minimum 25 titles
+User query: "${query}"
 `;
 
     const response = await fetch(
@@ -246,18 +248,16 @@ Rules:
     );
 
     const json = await response.json();
+
     const text = json?.choices?.[0]?.message?.content || "";
 
-    // Better parsing: remove newlines, split by comma, and clean each title
     const results = text
-      .replace(/\n/g, " ")
       .split(",")
-      .map((item) => item.trim().replace(/["']/g, "")) // Remove quotes
-      .filter((item) => item.length > 1);
+      .map((item) => item.trim())
+      .filter(Boolean);
 
     res.json(results);
   } catch (err) {
-    console.error("GPT Route Error:", err);
     res.status(500).json({ error: err.message });
   }
 });
