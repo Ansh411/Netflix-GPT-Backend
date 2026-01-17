@@ -206,7 +206,13 @@ app.get("/api/movies/:id/trailer", async (req, res) => {
 app.post("/api/gpt/search", async (req, res) => {
   try {
     const { query, type = "both" } = req.body;
+
     if (!query) return res.json([]);
+
+    // 🔒 Safety
+    if (!["movie", "tv", "both"].includes(type)) {
+      return res.json([]);
+    }
 
     const typeText =
       type === "movie"
@@ -216,11 +222,12 @@ app.post("/api/gpt/search", async (req, res) => {
         : "movies and TV shows";
 
     const prompt = `
-Return ONLY a comma-separated list of popular English ${typeText}.
+Return ONLY a comma-separated list of valid English ${typeText} titles.
 Rules:
 - No numbering
-- No explanation
-- Minimum 20 titles
+- No explanations
+- No extra text
+- Minimum 25 titles
 User query: "${query}"
 `;
 
@@ -230,20 +237,19 @@ User query: "${query}"
         method: "POST",
         headers: {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "openai/gpt-3.5-turbo",
+          model: "nex-agi/deepseek-v3.1-nex-n1:free",
           messages: [{ role: "user", content: prompt }],
-          temperature: 0.4,
-        }),
+          temperature: 0.4
+        })
       }
     );
 
     const json = await response.json();
 
-    const text =
-      json?.choices?.[0]?.message?.content?.trim() || "";
+    const text = json?.choices?.[0]?.message?.content || "";
 
     if (!text) {
       console.error("GPT returned empty response");
@@ -257,11 +263,10 @@ User query: "${query}"
 
     res.json(results);
   } catch (err) {
-    console.error("GPT API error:", err);
+    console.error("GPT API Error:", err);
     res.status(500).json([]);
   }
 });
-
 
 
 /* MOVIE LOGO (TMDB → FanArt fallback) */
