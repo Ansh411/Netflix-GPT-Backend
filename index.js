@@ -249,19 +249,32 @@ User query: "${query}"
 
     const json = await response.json();
 
-    const text = json?.choices?.[0]?.message?.content || "";
+    const rawText = json?.choices?.[0]?.message?.content?.trim() || "";
 
-    if (!text) {
+    if (!rawText) {
       console.error("GPT returned empty response");
       return res.json([]);
     }
 
-    const results = text
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const uniqueTitles = [
+      ...new Set(
+        rawText
+        .split(",")
+        .map((t) =>
+          t.trim().replace(/^["']|["']$/g, "")
+        .toLowerCase()
+        )
+        .filter(Boolean)
+      ),
+    ];
 
-    res.json(results);
+    const finalTitles = uniqueTitles.map((t) => 
+      t.split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
+    );
+
+    res.json(finalTitles);
   } catch (err) {
     console.error("GPT API Error:", err);
     res.status(500).json([]);
