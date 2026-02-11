@@ -240,7 +240,7 @@ User query: "${query}"
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "xiaomi/mimo-v2-flash:free",
+          model: "arcee-ai/trinity-large-preview:free",
           messages: [{ role: "user", content: prompt }],
           temperature: 0.4
         })
